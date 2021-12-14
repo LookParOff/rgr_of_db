@@ -1,0 +1,134 @@
+import psycopg2
+
+
+# connect with db
+def create_connection(db_name, db_user, db_password, db_host, db_port):
+    connection = None
+    try:
+        connection = psycopg2.connect(
+            database=db_name,
+            user=db_user,
+            password=db_password,
+            host=db_host,
+            port=db_port,
+        )
+        print("Connection to PostgreSQL DB successful")
+    except ConnectionError as e:
+        print(f"The error '{e}' occurred")
+    return connection
+
+
+connection = create_connection("Rgr", "postgres", "password", "127.0.0.1", "5432")
+
+
+# insert data
+def insert_in_table(name_of_table, list_of_fields):
+    # по name_of_table будем поределять куда вставлять данные
+    # в args будут поля, которые будем вставлять
+
+    user_records = ", ".join(["%s"] * len(list_of_fields))
+    insert_query = (
+        f'INSERT INTO {name_of_table} VALUES ({user_records})'
+    )
+    connection.autocommit = True
+    cursor = connection.cursor()
+    cursor.execute(insert_query, list_of_fields)
+
+
+# select data
+def select_in_table(name_of_table):
+    connection.autocommit = True
+    cursor = connection.cursor()
+    cursor.execute(f"SELECT * FROM {name_of_table}")
+    result = cursor.fetchall()
+    for el in result:
+        print(el)
+    return result
+
+
+# update data
+def update_in_table(name_of_table, value, condition):
+    insert_query = (
+        f'UPDATE {name_of_table} SET {value} WHERE {condition}'
+    )
+    connection.autocommit = True
+    cursor = connection.cursor()
+    cursor.execute(insert_query)
+
+
+# delete data
+def delete_in_table(name_of_table, condition):
+    query = (
+        f'DELETE FROM {name_of_table} WHERE {condition}'
+    )
+    connection.autocommit = True
+    cursor = connection.cursor()
+    cursor.execute(query)
+
+
+# print product with max price
+def select_max_price():
+    connection.autocommit = True
+    cursor = connection.cursor()
+    cursor.execute("SELECT MAX(price) as max FROM product")
+    result = cursor.fetchall()
+    print(result[0][0])
+
+
+# make sale
+def make_sale():
+    connection.autocommit = True
+    cursor = connection.cursor()
+    cursor.execute("UPDATE product SET price=price * 0.8")
+
+
+available_opers = ["insert", "select", "update", "delete", "max price", "make sale"]
+tab = '\n\t'
+if __name__ == "__main__":
+    print("Salut!")
+    while True:
+        print(f"Available operations are: {tab}{tab.join(available_opers)}")
+        operation = input("Insert the operation which you need to perform:\n")
+        if operation in available_opers:
+
+            if operation == "make sale":
+                make_sale()
+                print("Done!")
+                continue
+
+            if operation == "max price":
+                select_max_price()
+                print("Done!")
+                continue
+            print("Available tables is: "
+                  "\n\tbuyer(name, phone, birth_day)"
+                  "\n\towner_of_shop(name, phone, mail)"
+                  "\n\tproduct(name, price, manufacturer)"
+                  "\n\tpurchase(number_of_cheque, name_saler, address, owner_name, buyer_name, product_name, "
+                  "purchase_cost, count_of_product)"
+                  "\n\tsaler(name_saler, address, name, occupation, salary)"
+                  "\n\tshop(address, name, phone, time_of_work)")
+
+            table_name = input("Insert the name of the table, which you need\n")
+            if table_name in ["buyer", "owner_of_shop", "product", "purchase", "saler", "shop"]:
+
+                if operation == "select":
+                    select_in_table(table_name)
+
+                if operation == "insert":
+                    args = input("Insert values of fields of chosen table\n").split(",")
+                    insert_in_table(table_name, args)
+
+                if operation == "delete":
+                    cond = input("Insert condition of delete. For example: name='Ivan'\n")
+                    delete_in_table(table_name, cond)
+
+                if operation == "update":
+                    val = input("Insert the value you want to replace. For example: phone=682838\n")
+                    cond = input("Insert the condition of replace. For example: price<10\n")
+                    update_in_table(table_name, val, cond)
+                print("Done!\n")
+            else:
+                print("\nNO! Unexpected choose!\n")
+        else:
+            print("\nNO! Unexpected choose!\n")
