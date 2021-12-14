@@ -1,4 +1,5 @@
 import psycopg2
+from psycopg2 import sql
 
 
 # connect with db
@@ -23,9 +24,6 @@ connection = create_connection("Rgr", "postgres", "password", "127.0.0.1", "5432
 
 # insert data
 def insert_in_table(name_of_table, list_of_fields):
-    # по name_of_table будем поределять куда вставлять данные
-    # в args будут поля, которые будем вставлять
-
     user_records = ", ".join(["%s"] * len(list_of_fields))
     insert_query = (
         f'INSERT INTO {name_of_table} VALUES ({user_records})'
@@ -39,7 +37,8 @@ def insert_in_table(name_of_table, list_of_fields):
 def select_in_table(name_of_table):
     connection.autocommit = True
     cursor = connection.cursor()
-    cursor.execute(f"SELECT * FROM {name_of_table}")
+    stmt = sql.SQL("SELECT * FROM {name_of_table}").format(name_of_table=sql.Identifier(name_of_table),)
+    cursor.execute(stmt)
     result = cursor.fetchall()
     for el in result:
         print(el)
@@ -47,23 +46,22 @@ def select_in_table(name_of_table):
 
 
 # update data
-def update_in_table(name_of_table, value, condition):
-    insert_query = (
-        f'UPDATE {name_of_table} SET {value} WHERE {condition}'
-    )
+def update_in_table(name_of_table, name_value, value, name_condition, condition):
+    update_query = sql.SQL("UPDATE {table_name} SET {nam_val}={val} WHERE {name_cond}={cond}").\
+        format(table_name=sql.Identifier(name_of_table), nam_val=sql.Identifier(name_value), val=sql.Literal(value),
+               name_cond=sql.Identifier(name_condition), cond=sql.Literal(condition))
     connection.autocommit = True
     cursor = connection.cursor()
-    cursor.execute(insert_query)
+    cursor.execute(update_query)
 
 
 # delete data
-def delete_in_table(name_of_table, condition):
-    query = (
-        f'DELETE FROM {name_of_table} WHERE {condition}'
-    )
+def delete_in_table(name_of_table, name_condition, condition):
+    delete_query = sql.SQL("DELETE FROM {table_name} WHERE {name_cond}={cond}"). \
+        format(table_name=sql.Identifier(name_of_table), name_cond=sql.Identifier(name_condition), cond=sql.Literal(condition))
     connection.autocommit = True
     cursor = connection.cursor()
-    cursor.execute(query)
+    cursor.execute(delete_query)
 
 
 # print product with max price
@@ -120,13 +118,16 @@ if __name__ == "__main__":
                     insert_in_table(table_name, args)
 
                 if operation == "delete":
-                    cond = input("Insert condition of delete. For example: name='Ivan'\n")
-                    delete_in_table(table_name, cond)
+                    condition = input("Insert condition of delete. For example: name='Ivan'\n")
+                    name_cond, cond = condition.split("=")
+                    delete_in_table(table_name, name_cond, cond)
 
                 if operation == "update":
-                    val = input("Insert the value you want to replace. For example: phone=682838\n")
-                    cond = input("Insert the condition of replace. For example: price<10\n")
-                    update_in_table(table_name, val, cond)
+                    value = input("Insert the value you want to replace. For example: phone=682838\n")
+                    condition = input("Insert the condition of replace. For example: price=10\n")
+                    name_val, val = value.split("=")
+                    name_cond, cond = condition.split("=")
+                    update_in_table(table_name, name_val, val, name_cond, cond)
                 print("Done!\n")
             else:
                 print("\nNO! Unexpected choose!\n")
